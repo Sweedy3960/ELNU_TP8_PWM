@@ -42,3 +42,4 @@ tp_pwm\main.o: ../Inc/stm32driverlcd.h
 tp_pwm\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
 tp_pwm\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\time.h
 tp_pwm\main.o: ../Inc/stm32f0xx_it.h
+tp_pwm\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h

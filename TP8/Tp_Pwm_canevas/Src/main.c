@@ -33,7 +33,7 @@
 #include "stm32driverlcd.h"
 #include "time.h"
 #include "stm32f0xx_it.h"
-
+#include <stdlib.h>
 
 /* USER CODE END Includes */
 
@@ -144,26 +144,101 @@ void initialisation(void)
 void execution(void)
 {
 	
+		
 
 }
-void valueAdcToSpeedDir(int16_t* adcVal)
+void valueAdcToSpeedDir(int16_t* adcVal,MOT *moteur1)
 {
 	 int16_t adval = *adcVal;
-	 int speed =0; 
-	 char signe =0;
+	
 	 int16_t coef = -49;
-	 speed = (((adval*coef)/1000)+100);
-	 signe = (adval <=2040)? 1:(adval <=2040)?0:-1;
-			
+	 moteur1->speed = abs((((adval*coef)/1000)+100));
+	 moteur1->signe = (adval <=2040)? 1:(adval <=2040)?0:-1;
+}
+
+void angleToMs(char *consigneAngle,MOT *moteur2)
+{
+	int coef = 18;
+	int16_t ordoneOrig = -180;
+	char angle=*consigneAngle;
+	char time = 
+	
+	angle=(*consigneAngle *coef)+ordoneOrig;
+	//tms = angle 
 	
 }
-void  ReadIputs(void)
+void readInput(char *tb_portEntree)
+// cette fonction remplis toute les 5ms une case du tableau avec le port d'entrée
+//une fois plein le tableau est annalyser, la taille du tableau est faite pour les limites cdc 500ms
 {
 	
-	
+		tb_portEntree[2] = tb_portEntree[1];
+		tb_portEntree[1] = tb_portEntree[0];
+		tb_portEntree[0] = GPIOC-> IDR & 0x0F;
 	
 	
 }
+void inputsActions(char *tb_portEntree)
+{
+	bool modefin = false;
+	static char consigne = 0;
+	//Test pour pulse temps actif min 200ms
+			if ((tb_portEntree[0] != tb_portEntree[2]))
+			{
+				switch (((~(tb_portEntree[0]))&0xF))
+				{
+						case S2 :
+							modefin = !modefin;
+							break;
+						
+						case S3:
+							if (modefin)
+							{
+								consigne-=1;
+							}
+							else
+							{
+								consigne=((consigne-10)/10);
+							}
+							
+							break;
+						case S4:
+							if (modefin)
+							{
+								consigne+=1;
+							}
+							else
+							{
+								consigne=((consigne+10)/10);
+							}
+							break;
+						case S5:
+							if (modefin)
+							{
+								consigne = 0;
+							}
+							break;
+				}				
+			}
+
+}
+
+
+void setPWM_Percen(int *speed,char timer)
+{
+	switch(timer)
+	{
+		case 16:
+			TIM16->CCR1=*speed;
+			break;
+		case 17:
+			TIM17->CCR1=*speed;
+			break;
+	}		
+	
+		
+}
+	
 // ----------------------------------------------------------------
 
 /* USER CODE END 0 */
@@ -224,11 +299,19 @@ int main(void)
   {
     /* USER CODE END WHILE */
 		int16_t alors =0;
+		MOT moteur1;
+		MOT moteur2;
+		static char tb_portEntree[3]={0};
+		
     /* USER CODE BEGIN 3 */
 		LectureDuFlag1ms();
 		alors=Adc_read(0);
-		alors++; 
-		valueAdcToSpeedDir(&alors);
+		valueAdcToSpeedDir(&alors,&moteur1);
+		readInput(tb_portEntree);
+		inputsActions(tb_portEntree);
+		
+
+	
 		/*
 		char test;
 		test = Adc_read(1);	
