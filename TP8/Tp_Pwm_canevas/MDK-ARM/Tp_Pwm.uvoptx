@@ -230,6 +230,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>tb_portEntree[1]</ItemText>
         </Ww>
+        <Ww>
+          <count>16</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>consigne</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

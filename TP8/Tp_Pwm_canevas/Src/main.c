@@ -180,10 +180,10 @@ void readInput(char *tb_portEntree)
 }
 void inputsActions(char *tb_portEntree)
 {
-	bool modefin = false;
+	static bool modefin = false;
 	static char consigne = 0;
 	//Test pour pulse temps actif min 200ms
-			if ((tb_portEntree[0] != tb_portEntree[2]))
+			if ((tb_portEntree[0] != tb_portEntree[1])&& (tb_portEntree[0]!=0))
 			{
 				switch (((~(tb_portEntree[0]))&0xF))
 				{
