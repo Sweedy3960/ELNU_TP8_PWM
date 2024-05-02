@@ -125,8 +125,14 @@ void LectureDuFlag1ms(void)
 	}
 }
 
+void initmotors(servo*servo,dcmot*dcmot)
+{
+	//constructeur ??
+	dcmot->timerX=16;
+	servo->timerX=17;
+}
 
-void initialisation(void)
+void initialisation(mototrs *motUsed)
 //Affichage durant l'initialisation partie LCD 
 {
 	if (InitialisationHasOccured)
@@ -134,36 +140,30 @@ void initialisation(void)
 	}
 	else
 	{
+		
 		printf_lcd("TP AdLcd <2024>");
 		lcd_gotoxy(1,2);
 		printf_lcd("ACL EDA");
 		lcd_gotoxy(1,1);
 		lcd_bl_on();
+		//constructeur ??
+		initmotors(&motUsed->servo1,&motUsed->motor1);
 	}
 }
-void execution(void)
-{
-	
-		
 
-}
-void valueAdcToSpeedDir(int16_t* adcVal,MOT *moteur1)
+void valueAdcToSpeedDir(int16_t* adcVal,dcmot *moteur1)
 {
 	 int16_t adval = *adcVal;
-	
 	 int16_t coef = -49;
 	 moteur1->speed = abs((((adval*coef)/1000)+100));
-	 moteur1->signe = (adval <=2040)? 1:(adval <=2040)?0:-1;
+	 moteur1->sens = (adval <=2040)? 1:(adval <=2040)?0:-1;
 }
 
-void angleToMs(char *consigneAngle,MOT *moteur2)
+void angleToMs(char *consigneAngle,servo *moteur2)
 {
-	int coef = 18;
-	int16_t ordoneOrig = -180;
-	char angle=*consigneAngle;
-	char time = 
-	
-	angle=(*consigneAngle *coef)+ordoneOrig;
+	int16_t coef = -49;
+	int16_t ordoneOrig = 180;
+	moteur2->angleDegree=(*consigneAngle *coef)+ordoneOrig;
 	//tms = angle 
 	
 }
@@ -299,14 +299,14 @@ int main(void)
   {
     /* USER CODE END WHILE */
 		int16_t alors =0;
-		MOT moteur1;
-		MOT moteur2;
+		mototrs motUsed;
+		
 		static char tb_portEntree[3]={0};
 		
     /* USER CODE BEGIN 3 */
 		LectureDuFlag1ms();
 		alors=Adc_read(0);
-		valueAdcToSpeedDir(&alors,&moteur1);
+		valueAdcToSpeedDir(&alors,&motUsed.motor1);
 		readInput(tb_portEntree);
 		inputsActions(tb_portEntree);
 		
@@ -323,10 +323,9 @@ int main(void)
 			case INIT:
 				
 				state = IDLE;
-				initialisation();
+				initialisation(&motUsed);
 				break;
 			case EXEC:
-				execution();
 				state = IDLE;
 				break;
 			case IDLE:

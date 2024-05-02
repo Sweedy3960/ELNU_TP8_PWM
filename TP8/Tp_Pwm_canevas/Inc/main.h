@@ -143,11 +143,23 @@ typedef enum {INIT,EXEC,IDLE}e_States;
 
 #define TIM17_100 100
 #define TIM17_1 	1
-typedef struct {
-	int speed ; 
-	signed char signe ;
-}MOT; 
 
+typedef struct {
+	char angleDegree;
+	char sens;
+	char pwmPercent;
+	char timerX;
+}servo;
+
+typedef struct {
+	char speed;
+	char sens;
+	char timerX;
+}dcmot;
+typedef struct {
+ servo servo1;
+ dcmot motor1;
+}mototrs;
 
 /* USER CODE END Private defines */
 
