@@ -155,17 +155,16 @@ void valueAdcToSpeedDir(int16_t* adcVal,dcmot *moteur1)
 {
 	 int16_t adval = *adcVal;
 	 int16_t coef = -49;
-	 moteur1->speed = abs((((adval*coef)/1000)+100));
-	 moteur1->sens = (adval <=2040)? 1:(adval <=2040)?0:-1;
+	 moteur1->speed_Percent = abs((((adval*coef)/1000)+100));
+	 moteur1->sens = (adval <=2040)? '>':(adval <=2040)?'-':'<';
 }
 
-void angleToMs(char *consigneAngle,servo *moteur2)
+void angleToTicks(char *consigneAngle,servo *moteur2)
 {
-	int16_t coef = -49;
-	int16_t ordoneOrig = 180;
-	moteur2->angleDegree=(*consigneAngle *coef)+ordoneOrig;
-	//tms = angle 
-	
+	int coef = 288;
+	moteur2->pwmPercent_Tick = abs((((*consigneAngle*coef)))+_06MSTOTICK+_15MSTOTICK);
+	moteur2->angleDegree = *consigneAngle;
+	//moteur2->sens = (adval <=2040)? '>':(adval <=2040)?'-':'<';
 }
 void readInput(char *tb_portEntree)
 // cette fonction remplis toute les 5ms une case du tableau avec le port d'entrée
@@ -178,10 +177,10 @@ void readInput(char *tb_portEntree)
 	
 	
 }
-void inputsActions(char *tb_portEntree)
+void inputsActions(char *tb_portEntree,char *servoConsigne)
 {
 	static bool modefin = false;
-	static char consigne = 0;
+	
 	//Test pour pulse temps actif min 200ms
 			if ((tb_portEntree[0] != tb_portEntree[1])&& (tb_portEntree[0]!=0))
 			{
@@ -194,51 +193,48 @@ void inputsActions(char *tb_portEntree)
 						case S3:
 							if (modefin)
 							{
-								consigne-=1;
+								*servoConsigne-=1;
 							}
 							else
 							{
-								consigne=((consigne-10)/10);
+								*servoConsigne=((*servoConsigne-10)/10);
 							}
 							
 							break;
 						case S4:
 							if (modefin)
 							{
-								consigne+=1;
+								*servoConsigne+=1;
 							}
 							else
 							{
-								consigne=((consigne+10)/10);
+								*servoConsigne=((*servoConsigne+10)/10);
 							}
 							break;
 						case S5:
 							if (modefin)
 							{
-								consigne = 0;
+								servoConsigne = 0;
 							}
 							break;
 				}				
 			}
 
 }
-
-
-void setPWM_Percen(int *speed,char timer)
+void setpulseregister(mototrs *motUsed)
 {
-	switch(timer)
-	{
-		case 16:
-			TIM16->CCR1=*speed;
-			break;
-		case 17:
-			TIM17->CCR1=*speed;
-			break;
-	}		
-	
-		
+	TIM16->CCR1= motUsed->motor1.timerX;
+	TIM17->CCR1= motUsed->servo1.timerX;
+
 }
-	
+
+
+void execution(mototrs *motUsed)
+{
+		printf_lcd("SPEED : %d % / DIR : %c",motUsed->motor1.speed_Percent, motUsed->motor1.sens);
+		lcd_gotoxy(1,2);
+		printf_lcd("ANGLE: %c, %d",motUsed->servo1.angleDegree,motUsed->servo1.sens);
+}
 // ----------------------------------------------------------------
 
 /* USER CODE END 0 */
@@ -283,7 +279,6 @@ int main(void)
   MX_TIM16_Init();
   MX_TIM17_Init();
   MX_ADC_Init();
-	lcd_init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start_IT(&htim16);
@@ -298,19 +293,19 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
 		int16_t alors =0;
 		mototrs motUsed;
-		
+		char servoConsigne = 90;
 		static char tb_portEntree[3]={0};
-		
-    /* USER CODE BEGIN 3 */
 		LectureDuFlag1ms();
 		alors=Adc_read(0);
 		valueAdcToSpeedDir(&alors,&motUsed.motor1);
 		readInput(tb_portEntree);
-		inputsActions(tb_portEntree);
-		
-
+		inputsActions(tb_portEntree,&servoConsigne);
+		angleToTicks(&servoConsigne,&motUsed.servo1);
+		setpulseregister(&motUsed);
 	
 		/*
 		char test;

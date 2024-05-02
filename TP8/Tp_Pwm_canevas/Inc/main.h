@@ -31,7 +31,7 @@ extern "C" {
 #include "stm32f0xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */	
+/* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
@@ -144,15 +144,19 @@ typedef enum {INIT,EXEC,IDLE}e_States;
 #define TIM17_100 100
 #define TIM17_1 	1
 
+#define _06MSTOTICK 5760
+#define _15MSTOTICK 25920
+
+
 typedef struct {
 	char angleDegree;
 	char sens;
-	char pwmPercent;
+	unsigned short pwmPercent_Tick;
 	char timerX;
 }servo;
 
 typedef struct {
-	char speed;
+	char speed_Percent;
 	char sens;
 	char timerX;
 }dcmot;
