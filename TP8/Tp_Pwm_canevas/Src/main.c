@@ -129,7 +129,16 @@ void initmotors(servo*servo,dcmot*dcmot)
 {
 	//constructeur ??
 	dcmot->timerX=16;
+	dcmot->speed_Percent=0;
+	GPIOB->ODR |= MOT_EN;
 	servo->timerX=17;
+	
+}
+void setpulseregister(mototrs *motUsed)
+{
+	TIM16->CCR1= motUsed->motor1.speed_Percent;
+	TIM17->CCR1= motUsed->servo1.pwmPercent_Tick;
+
 }
 
 void initialisation(mototrs *motUsed)
@@ -143,11 +152,11 @@ void initialisation(mototrs *motUsed)
 		
 		printf_lcd("TP AdLcd <2024>");
 		lcd_gotoxy(1,2);
-		printf_lcd("ACL EDA");
-		lcd_gotoxy(1,1);
+		printf_lcd("ACL EDA  ");
 		lcd_bl_on();
 		//constructeur ??
 		initmotors(&motUsed->servo1,&motUsed->motor1);
+		setpulseregister(motUsed);
 	}
 }
 
@@ -156,15 +165,32 @@ void valueAdcToSpeedDir(int16_t* adcVal,dcmot *moteur1)
 	 int16_t adval = *adcVal;
 	 int16_t coef = -49;
 	 moteur1->speed_Percent = abs((((adval*coef)/1000)+100));
-	 moteur1->sens = (adval <=2040)? '>':(adval <=2040)?'-':'<';
+	 //
+	 moteur1->sens = (adval <=2040)? '>':(moteur1->speed_Percent !=0)?'<':'-';
+	
+	switch (moteur1->sens)
+	{
+		case '>':
+			GPIOB->ODR &= ~MOT_DIR;
+			break;
+		case '<':
+			GPIOB->ODR |= MOT_DIR;
+			break;
+		default:
+			GPIOB->ODR |= MOT_DIR;
+			break;
+	}
+	
+	 
 }
 
-void angleToTicks(char *consigneAngle,servo *moteur2)
+void angleToTicks(int *consigneAngle,servo *moteur2)
 {
-	int coef = 288;
-	moteur2->pwmPercent_Tick = abs((((*consigneAngle*coef)))+_06MSTOTICK+_15MSTOTICK);
+	int coef = 96;
+	int consignAngle = *consigneAngle;
+	moteur2->pwmPercent_Tick = (abs(((consignAngle)*coef)+(_06MSTOTICK)));
 	moteur2->angleDegree = *consigneAngle;
-	//moteur2->sens = (adval <=2040)? '>':(adval <=2040)?'-':'<';
+	moteur2->sens = (consignAngle <90)? '-':(consignAngle >90)?'+':' ';
 }
 void readInput(char *tb_portEntree)
 // cette fonction remplis toute les 5ms une case du tableau avec le port d'entrée
@@ -177,10 +203,10 @@ void readInput(char *tb_portEntree)
 	
 	
 }
-void inputsActions(char *tb_portEntree,char *servoConsigne)
+void inputsActions(char *tb_portEntree,int *servoConsigne)
 {
 	static bool modefin = false;
-	
+	int consignAngle = *servoConsigne;
 	//Test pour pulse temps actif min 200ms
 			if ((tb_portEntree[0] != tb_portEntree[1])&& (tb_portEntree[0]!=0))
 			{
@@ -191,49 +217,67 @@ void inputsActions(char *tb_portEntree,char *servoConsigne)
 							break;
 						
 						case S3:
-							if (modefin)
+							if (consignAngle >=1)
 							{
-								*servoConsigne-=1;
+								if (modefin)
+								{
+									consignAngle-=1;
+								}
+								else
+								{
+									consignAngle=(((consignAngle-10)/10)*10);
+								}
 							}
-							else
-							{
-								*servoConsigne=((*servoConsigne-10)/10);
-							}
-							
 							break;
 						case S4:
-							if (modefin)
+							if (consignAngle <180)
 							{
-								*servoConsigne+=1;
-							}
-							else
-							{
-								*servoConsigne=((*servoConsigne+10)/10);
+								if (modefin)
+								{
+									consignAngle+=1;
+								}
+								else
+								{
+									consignAngle=(((consignAngle+10)/10)*10);
+								}
 							}
 							break;
 						case S5:
-							if (modefin)
-							{
-								servoConsigne = 0;
-							}
+							
+							consignAngle = 90;
+							
 							break;
-				}				
+				}		
+				if(consignAngle > 180 || consignAngle < 0  )
+				{
+					
+				}
+				else
+				{
+					*servoConsigne = consignAngle;
+				}
 			}
-
-}
-void setpulseregister(mototrs *motUsed)
-{
-	TIM16->CCR1= motUsed->motor1.timerX;
-	TIM17->CCR1= motUsed->servo1.timerX;
 
 }
 
 
 void execution(mototrs *motUsed)
 {
-		printf_lcd("SPEED : %d % / DIR : %c",motUsed->motor1.speed_Percent, motUsed->motor1.sens);
+		static int16_t alors =0;
+		
+		static int servoConsigne = 0;
+		static char tb_portEntree[3]={0};
+	
+		alors=Adc_read(0);
+		valueAdcToSpeedDir(&alors,&motUsed->motor1);
+		readInput(tb_portEntree);
+		inputsActions(tb_portEntree,&servoConsigne);
+		angleToTicks(&servoConsigne,&motUsed->servo1);
+		setpulseregister(motUsed);
+		lcd_gotoxy(1,1);
+		printf_lcd("SPEED: %d / % DIR: %c ",motUsed->motor1.speed_Percent, motUsed->motor1.sens);
 		lcd_gotoxy(1,2);
-		printf_lcd("ANGLE: %c, %d",motUsed->servo1.angleDegree,motUsed->servo1.sens);
+		printf_lcd("ANGLE: %c %d          ",(motUsed->servo1.sens),abs(motUsed->servo1.angleDegree-90));
 }
 // ----------------------------------------------------------------
 
@@ -279,6 +323,7 @@ int main(void)
   MX_TIM16_Init();
   MX_TIM17_Init();
   MX_ADC_Init();
+	lcd_init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start_IT(&htim16);
@@ -290,23 +335,15 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	HAL_ADCEx_Calibration_Start(&hadc);
+	static mototrs motUsed;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		int16_t alors =0;
-		mototrs motUsed;
-		char servoConsigne = 90;
-		static char tb_portEntree[3]={0};
+		
 		LectureDuFlag1ms();
-		alors=Adc_read(0);
-		valueAdcToSpeedDir(&alors,&motUsed.motor1);
-		readInput(tb_portEntree);
-		inputsActions(tb_portEntree,&servoConsigne);
-		angleToTicks(&servoConsigne,&motUsed.servo1);
-		setpulseregister(&motUsed);
-	
+		
 		/*
 		char test;
 		test = Adc_read(1);	
@@ -321,7 +358,9 @@ int main(void)
 				initialisation(&motUsed);
 				break;
 			case EXEC:
+				
 				state = IDLE;
+				execution(&motUsed);
 				break;
 			case IDLE:
 				

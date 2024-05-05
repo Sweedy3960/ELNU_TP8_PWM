@@ -90,6 +90,8 @@ typedef enum {INIT,EXEC,IDLE}e_States;
 #define LED0_GPIO_Port GPIOC
 #define LED1_Pin GPIO_PIN_5
 #define LED1_GPIO_Port GPIOC
+#define MOT_EN_Pin GPIO_PIN_2
+#define MOT_EN_GPIO_Port GPIOB
 #define LED2_Pin GPIO_PIN_6
 #define LED2_GPIO_Port GPIOC
 #define LED3_Pin GPIO_PIN_7
@@ -116,6 +118,8 @@ typedef enum {INIT,EXEC,IDLE}e_States;
 #define LCDDB7_GPIO_Port GPIOC
 #define LCDE_Pin GPIO_PIN_12
 #define LCDE_GPIO_Port GPIOC
+#define MOT_DIR_Pin GPIO_PIN_4
+#define MOT_DIR_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 #define ALLS 0x0F
 #define S2 0x01
@@ -146,7 +150,8 @@ typedef enum {INIT,EXEC,IDLE}e_States;
 
 #define _06MSTOTICK 5760
 #define _15MSTOTICK 25920
-
+#define  MOT_EN 0x04
+#define  MOT_DIR 0x10
 
 typedef struct {
 	char angleDegree;
@@ -159,11 +164,13 @@ typedef struct {
 	char speed_Percent;
 	char sens;
 	char timerX;
+	char mot_fault:1;
 }dcmot;
 typedef struct {
  servo servo1;
  dcmot motor1;
 }mototrs;
+
 
 /* USER CODE END Private defines */
 
