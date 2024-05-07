@@ -120,6 +120,8 @@ typedef enum {INIT,EXEC,IDLE}e_States;
 #define LCDE_GPIO_Port GPIOC
 #define MOT_DIR_Pin GPIO_PIN_4
 #define MOT_DIR_GPIO_Port GPIOB
+#define MEASUREPIN_GPIO_Port GPIOB
+#define MEASUREPIN_Pin GPIO_PIN_4
 /* USER CODE BEGIN Private defines */
 #define ALLS 0x0F
 #define S2 0x01
@@ -149,9 +151,21 @@ typedef enum {INIT,EXEC,IDLE}e_States;
 #define TIM17_1 	1
 
 #define _06MSTOTICK 5760
+#define _6MSTOTICK 57600
 #define _15MSTOTICK 25920
+#define ANGLETOT 180
+#define TICKTOT (((_6MSTOTICK/10)*4)-(_6MSTOTICK/10))
+//coef = ticktot/angletot = tick pour 2.4ms - tick pour 0.6ms /angle 
+// =((57600/10)*4)-(57600/10))/180 =96  
+#define COEFSERVO (TICKTOT/ANGLETOT)
+
+
+
+#define OFFSETDCSPEED 100
+#define COEFPRECISION 1000
 #define  MOT_EN 0x04
 #define  MOT_DIR 0x10
+#define COEFDCMOT -49
 
 typedef struct {
 	char angleDegree;

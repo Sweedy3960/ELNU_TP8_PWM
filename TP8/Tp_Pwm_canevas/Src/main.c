@@ -75,7 +75,7 @@ static bool InitialisationHasOccured = false;
 // ADC 
 // Lecture d'un canal AD par polling
 // Il faut auparavant avoir configuré la/les pin(s) concernée(s) en entrée analogique
-int16_t Adc_read(uint8_t chNr)
+int16_t inline Adc_read(uint8_t chNr)
 {	
 	//démarage périph
 	HAL_ADC_Start(&hadc);
@@ -98,12 +98,13 @@ void LectureDuFlag1ms(void)
 {
 	
 	static uint16_t cntTime = 0;
+	//test du flag 
 	if(flag1Ms)
 	{
 		flag1Ms=false; 
 		
 		cntTime++;
-		
+		//
 		if (cntTime%_25MSEC == 0)
 		{
 			state = (InitialisationHasOccured)? EXEC: INIT;
@@ -125,7 +126,7 @@ void LectureDuFlag1ms(void)
 	}
 }
 
-void initmotors(servo*servo,dcmot*dcmot)
+void inline initmotors(servo*servo,dcmot*dcmot)
 {
 	//constructeur ??
 	dcmot->timerX=16;
@@ -134,7 +135,7 @@ void initmotors(servo*servo,dcmot*dcmot)
 	servo->timerX=17;
 	
 }
-void setpulseregister(mototrs *motUsed)
+void inline setpulseregister(mototrs *motUsed)
 {
 	TIM16->CCR1= motUsed->motor1.speed_Percent;
 	TIM17->CCR1= motUsed->servo1.pwmPercent_Tick;
@@ -160,13 +161,10 @@ void initialisation(mototrs *motUsed)
 	}
 }
 
-void valueAdcToSpeedDir(int16_t* adcVal,dcmot *moteur1)
+void inline valueAdcToSpeedDir(int16_t* adcVal,dcmot *moteur1)
 {
-	 int16_t adval = *adcVal;
-	 int16_t coef = -49;
-	 moteur1->speed_Percent = abs((((adval*coef)/1000)+100));
-	 //
-	 moteur1->sens = (adval <=2040)? '>':(moteur1->speed_Percent !=0)?'<':'-';
+	 moteur1->speed_Percent = abs((((*adcVal*COEFDCMOT)/COEFPRECISION)+OFFSETDCSPEED));
+	 moteur1->sens = (*adcVal <=ADCMIDLVAL)? '>':(moteur1->speed_Percent !=0)?'<':'-';
 	
 	switch (moteur1->sens)
 	{
@@ -180,28 +178,24 @@ void valueAdcToSpeedDir(int16_t* adcVal,dcmot *moteur1)
 			GPIOB->ODR |= MOT_DIR;
 			break;
 	}
-	
-	 
 }
 
-void angleToTicks(int *consigneAngle,servo *moteur2)
+void inline angleToTicks(int *consigneAngle,servo *moteur2)
 {
-	int coef = 96;
-	int consignAngle = *consigneAngle;
-	moteur2->pwmPercent_Tick = (abs(((consignAngle)*coef)+(_06MSTOTICK)));
+	//calcul pour temps haut 
+	moteur2->pwmPercent_Tick = (abs(((*consigneAngle)*COEFSERVO)+(_06MSTOTICK)));
 	moteur2->angleDegree = *consigneAngle;
-	moteur2->sens = (consignAngle <90)? '-':(consignAngle >90)?'+':' ';
+	//test pour sens
+	moteur2->sens = (*consigneAngle <(ANGLETOT/2))? '-':(*consigneAngle >(ANGLETOT/2))?'+':' ';
+	
 }
-void readInput(char *tb_portEntree)
+void inline readInput(char *tb_portEntree)
 // cette fonction remplis toute les 5ms une case du tableau avec le port d'entrée
 //une fois plein le tableau est annalyser, la taille du tableau est faite pour les limites cdc 500ms
 {
-	
 		tb_portEntree[2] = tb_portEntree[1];
 		tb_portEntree[1] = tb_portEntree[0];
-		tb_portEntree[0] = GPIOC-> IDR & 0x0F;
-	
-	
+		tb_portEntree[0] = GPIOC-> IDR & 0x0F;	
 }
 void inputsActions(char *tb_portEntree,int *servoConsigne)
 {
@@ -229,6 +223,7 @@ void inputsActions(char *tb_portEntree,int *servoConsigne)
 								}
 							}
 							break;
+							
 						case S4:
 							if (consignAngle <180)
 							{
@@ -242,6 +237,7 @@ void inputsActions(char *tb_portEntree,int *servoConsigne)
 								}
 							}
 							break;
+							
 						case S5:
 							
 							consignAngle = 90;
@@ -263,12 +259,10 @@ void inputsActions(char *tb_portEntree,int *servoConsigne)
 
 void execution(mototrs *motUsed)
 {
-		static int16_t alors =0;
-		
+		static int16_t alors =0;	
 		static int servoConsigne = 0;
 		static char tb_portEntree[3]={0};
 	
-		alors=Adc_read(0);
 		valueAdcToSpeedDir(&alors,&motUsed->motor1);
 		readInput(tb_portEntree);
 		inputsActions(tb_portEntree,&servoConsigne);
@@ -291,11 +285,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 	//variables
-	// *** A COMPLETER ! ***
-
-	
-	//init	
-	// *** A COMPLETER ! ***
+	static mototrs motUsed;
 	
 
   /* USER CODE END 1 */
@@ -335,42 +325,28 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	HAL_ADCEx_Calibration_Start(&hadc);
-	static mototrs motUsed;
+	
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
 		LectureDuFlag1ms();
-		
-		/*
-		char test;
-		test = Adc_read(1);	
-		TIM16->CCR1=1;
-		TIM17->CCR1=1;
-		*/
 		switch(state)
 		{
 			case INIT:
-				
 				state = IDLE;
 				initialisation(&motUsed);
 				break;
 			case EXEC:
-				
 				state = IDLE;
 				execution(&motUsed);
 				break;
 			case IDLE:
-				
 				break;
 			default: 
 				break;
-		}
-		
-		// *** A COMPLETER ! ***
-		
+		}	
   }
   /* USER CODE END 3 */
 }
